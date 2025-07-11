@@ -2,6 +2,8 @@ module github.com/swaggo/swag/v2
 
 go 1.18
 
+replace github.com/sv-tools/openapi v0.4.0 => github.com/jmaitrehenry/openapi v0.4.2
+
 require (
 	github.com/KyleBanks/depth v1.2.1
 	github.com/go-openapi/spec v0.20.9

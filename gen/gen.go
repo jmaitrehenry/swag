@@ -52,9 +52,19 @@ type Debugger interface {
 // New creates a new Gen.
 func New() *Gen {
 	gen := Gen{
-		json: json.Marshal,
+		json: func(data interface{}) ([]byte, error) {
+			res, err := json.Marshal(data)
+			if err != nil {
+				return nil, err
+			}
+			return replaceRawExampleToExample(res, json.Marshal)
+		},
 		jsonIndent: func(data interface{}) ([]byte, error) {
-			return json.MarshalIndent(data, "", "    ")
+			res, err := json.Marshal(data)
+			if err != nil {
+				return nil, err
+			}
+			return replaceRawExampleToExample(res, func(v interface{}) ([]byte, error) { return json.MarshalIndent(v, "", "    ") })
 		},
 		jsonToYAML: yaml.JSONToYAML,
 		debug:      log.New(os.Stdout, "", log.LstdFlags),
@@ -615,4 +625,68 @@ func (g *Gen) writeGoDocV3(packageName string, output io.Writer, openAPI *v3.Ope
 	_, err = output.Write(code)
 
 	return err
+}
+
+func replaceRawExampleToExample(data []byte, jsonMarshalFunc func(data interface{}) ([]byte, error)) ([]byte, error) {
+	if strings.Contains(string(data), "exampleRaw") {
+		// Create a map to store the parsed JSON
+		var jsonMap map[string]interface{}
+
+		// Unmarshal the byte array into the map
+		if err := json.Unmarshal(data, &jsonMap); err != nil {
+			return data, fmt.Errorf("error unmarshaling JSON: %w", err)
+		}
+
+		// Process the map recursively
+		processMap(jsonMap)
+
+		// Marshal back to JSON
+		result, err := jsonMarshalFunc(jsonMap)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling JSON: %w", err)
+		}
+
+		return result, nil
+
+	}
+	return data, nil
+}
+
+func processMap(m map[string]interface{}) {
+	for key, value := range m {
+		switch v := value.(type) {
+		case string:
+			// If we find the target key, convert its value to upper case
+			if key == "exampleRaw" {
+				//m["example"] = strings.ToUpper(v)
+
+				var decoded interface{}
+				if err := json.Unmarshal([]byte(v), &decoded); err != nil {
+					continue
+				}
+				// Replace the string value with the decoded JSON
+				m["example"] = decoded
+				delete(m, key)
+
+			}
+
+		case map[string]interface{}:
+			// Recursively process nested maps
+			processMap(v)
+		case []interface{}:
+			// Process arrays
+			processArray(v)
+		}
+	}
+}
+
+func processArray(arr []interface{}) {
+	for _, value := range arr {
+		switch v := value.(type) {
+		case map[string]interface{}:
+			processMap(v)
+		case []interface{}:
+			processArray(v)
+		}
+	}
 }

@@ -249,7 +249,7 @@ func (ps *tagBaseFieldParserV3) complementSchema(schema *spec.Schema, types []st
 	if ok {
 		field.exampleValue = exampleTagValue
 
-		if !strings.Contains(jsonTagValue, ",string") {
+		if !strings.Contains(jsonTagValue, ",string") && !strings.HasSuffix(exampleTagValue, ";raw") {
 			example, err := defineTypeOfExample(field.schemaType, field.arrayType, exampleTagValue)
 			if err != nil {
 				return err
@@ -304,7 +304,11 @@ func (ps *tagBaseFieldParserV3) complementSchema(schema *spec.Schema, types []st
 		schema.Default = value
 	}
 
-	schema.Example = field.exampleValue
+	if val, ok := field.exampleValue.(string); ok && strings.HasSuffix(val, ";raw") {
+		schema.ExampleJsonRaw = strings.TrimSuffix(val, ";raw")
+	} else {
+		schema.Example = field.exampleValue
+	}
 
 	if field.schemaType != ARRAY {
 		schema.Format = field.formatType

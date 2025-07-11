@@ -931,3 +931,12 @@ func TestGen_StateUser(t *testing.T) {
 
 	assert.JSONEq(t, string(expectedJSON), string(jsonOutput))
 }
+
+func Test_replaceRawExampleToExampleest(t *testing.T) {
+	data := []byte(`{"exampleRaw":"{\"1monday\": [{\"open\": \"12:00\", \"close\": \"14:30\"}], \"2friday\": [{\"open\": \"9:00\", \"close\": \"12:00\"}, {\"open\": \"13:00\", \"close\": \"17:00\"}]}"}`)
+	expected := []byte(`{"example":{"1monday":[{"close":"14:30","open":"12:00"}],"2friday":[{"close":"12:00","open":"9:00"},{"close":"17:00","open":"13:00"}]}}`)
+
+	res, err := replaceRawExampleToExample(data, json.Marshal)
+	require.NoError(t, err)
+	assert.Equal(t, string(expected), string(res))
+}
