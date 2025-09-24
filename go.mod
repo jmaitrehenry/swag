@@ -1,6 +1,6 @@
 module github.com/swaggo/swag/v2
 
-go 1.18
+go 1.21
 
 replace github.com/sv-tools/openapi v0.4.0 => github.com/jmaitrehenry/openapi v0.4.2
 
