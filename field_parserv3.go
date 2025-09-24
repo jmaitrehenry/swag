@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/sv-tools/openapi/spec"
+	"github.com/jmaitrehenry/openapi/spec"
 )
 
 type structFieldV3 struct {

@@ -3,7 +3,7 @@ package swag
 import (
 	"errors"
 
-	"github.com/sv-tools/openapi/spec"
+	"github.com/jmaitrehenry/openapi/spec"
 )
 
 // PrimitiveSchemaV3 build a primitive schema.

@@ -1,6 +1,6 @@
 package swag
 
-import "github.com/sv-tools/openapi/spec"
+import "github.com/jmaitrehenry/openapi/spec"
 
 // SchemaV3 parsed schema.
 type SchemaV3 struct {

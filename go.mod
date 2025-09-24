@@ -1,14 +1,12 @@
-module github.com/swaggo/swag/v2
+module github.com/jmaitrehenry/swag/v2
 
 go 1.21
-
-replace github.com/sv-tools/openapi v0.4.0 => github.com/jmaitrehenry/openapi v0.4.2
 
 require (
 	github.com/KyleBanks/depth v1.2.1
 	github.com/go-openapi/spec v0.20.9
+	github.com/jmaitrehenry/openapi v0.5.0
 	github.com/stretchr/testify v1.9.0
-	github.com/sv-tools/openapi v0.4.0
 	github.com/urfave/cli/v2 v2.27.5
 	golang.org/x/text v0.15.0
 	golang.org/x/tools v0.8.0

@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/sv-tools/openapi/spec"
+	"github.com/jmaitrehenry/openapi/spec"
 	"gopkg.in/yaml.v3"
 )
 

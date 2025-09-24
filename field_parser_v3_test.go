@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/sv-tools/openapi/spec"
+	"github.com/jmaitrehenry/openapi/spec"
 )
 
 func TestDefaultFieldParserV3(t *testing.T) {

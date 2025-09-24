@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/sv-tools/openapi/spec"
+	"github.com/jmaitrehenry/openapi/spec"
 )
 
 func TestOverridesGetTypeSchemaV3(t *testing.T) {

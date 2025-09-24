@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/sv-tools/openapi/spec"
+	"github.com/jmaitrehenry/openapi/spec"
 )
 
 var typeObject = spec.SingleOrArray[string](spec.SingleOrArray[string]{OBJECT})

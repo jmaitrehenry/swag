@@ -3,8 +3,8 @@ package api
 import (
 	"net/http"
 
-	"github.com/swaggo/swag/v2/testdata/generics_property/types"
-	"github.com/swaggo/swag/v2/testdata/generics_property/web"
+	"github.com/jmaitrehenry/swag/v2/testdata/generics_property/types"
+	"github.com/jmaitrehenry/swag/v2/testdata/generics_property/web"
 )
 
 type NestedResponse struct {

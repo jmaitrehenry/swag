@@ -1,6 +1,6 @@
 package types
 
-import "github.com/swaggo/swag/v2/testdata/v3/type_alias_definition/othertypes"
+import "github.com/jmaitrehenry/swag/v2/testdata/v3/type_alias_definition/othertypes"
 
 type Struct struct {
 	String       string       `json:"string"`

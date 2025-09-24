@@ -11,7 +11,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/sv-tools/openapi/spec"
+	"github.com/jmaitrehenry/openapi/spec"
 )
 
 // FieldParserFactoryV3 create FieldParser.

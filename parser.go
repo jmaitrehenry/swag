@@ -21,7 +21,7 @@ import (
 
 	"github.com/KyleBanks/depth"
 	"github.com/go-openapi/spec"
-	openapi "github.com/sv-tools/openapi/spec"
+	openapi "github.com/jmaitrehenry/openapi/spec"
 )
 
 const (

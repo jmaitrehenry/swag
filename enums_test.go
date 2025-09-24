@@ -23,7 +23,7 @@ func TestParseGlobalEnums(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, string(expected), string(b))
 
-	constsPath := "github.com/swaggo/swag/v2/testdata/enums/consts"
+	constsPath := "github.com/jmaitrehenry/swag/v2/testdata/enums/consts"
 
 	assert.Equal(t, bits.UintSize, p.packages.packages[constsPath].ConstTable["uintSize"].Value)
 	assert.Equal(t, int32(62), p.packages.packages[constsPath].ConstTable["maxBase"].Value)

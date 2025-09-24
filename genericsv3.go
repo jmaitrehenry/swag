@@ -3,7 +3,7 @@ package swag
 import (
 	"go/ast"
 
-	"github.com/sv-tools/openapi/spec"
+	"github.com/jmaitrehenry/openapi/spec"
 )
 
 func (p *Parser) parseGenericTypeExprV3(file *ast.File, typeExpr ast.Expr) (*spec.RefOrSpec[spec.Schema], error) {
