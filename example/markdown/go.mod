@@ -2,8 +2,6 @@ module github.com/jmaitrehenry/swag/example/markdown
 
 go 1.24.0
 
-replace github.com/jmaitrehenry/swag v1.9.1 => ../..
-
 require (
 	github.com/gorilla/mux v1.8.1
 	github.com/jmaitrehenry/swag v1.9.1

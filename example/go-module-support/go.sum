@@ -46,6 +46,8 @@ github.com/google/go-cmp v0.7.0/go.mod h1:pXiqmnSA92OHEEa9HXL2W4E7lf9JzCmGVUdgjX
 github.com/google/gofuzz v1.0.0/go.mod h1:dBl0BpW6vV/+mYPU4Po3pmUjxk6FQPldtuIdl/M65Eg=
 github.com/jmaitrehenry/openapi v0.5.0 h1:Zve1A3hIPXdsvJwoiTgUzKM38Dnz9TwV/Ohku9ncgrs=
 github.com/jmaitrehenry/openapi v0.5.0/go.mod h1:DDxERB64gbjduFwKMJjgvdQMfD3F/uasSFyAS+L5tPc=
+github.com/jmaitrehenry/swag v1.9.1 h1:BEL9KzB7SeuahiLj3YhTcDRuhpi/8CPd603Icfeq+mE=
+github.com/jmaitrehenry/swag v1.9.1/go.mod h1:lLGTblKZ8cQ5M9jIIVVrmqDDl/xVtWZ0OzVnYyXLLys=
 github.com/josharian/intern v1.0.0 h1:vlS4z54oSdjm0bgjRigI+G1HpF+tI+9rE5LLzOg8HmY=
 github.com/josharian/intern v1.0.0/go.mod h1:5DoeVV0s6jJacbCEi61lwdGj/aVlrQvzHFFd8Hwg//Y=
 github.com/json-iterator/go v1.1.12 h1:PV8peI4a0ysnczrg+LtxykD8LfKY9ML6u2jnxaEnrnM=
