@@ -4,8 +4,8 @@ import (
 	"go/ast"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/jmaitrehenry/openapi/spec"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestDefaultFieldParserV3(t *testing.T) {

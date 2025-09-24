@@ -6,9 +6,9 @@ import (
 	"go/token"
 	"testing"
 
+	"github.com/jmaitrehenry/openapi/spec"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/jmaitrehenry/openapi/spec"
 )
 
 var typeObject = spec.SingleOrArray[string](spec.SingleOrArray[string]{OBJECT})
