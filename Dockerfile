@@ -1,7 +1,7 @@
 # Dockerfile References: https://docs.docker.com/engine/reference/builder/
 
 # Start from the latest golang base image
-FROM golang:1.24 AS builder
+FROM golang:1.25 AS builder
 
 # Set the Current Working Directory inside the container
 WORKDIR /app
@@ -20,5 +20,6 @@ RUN go build -v -a -o swag cmd/swag/main.go
 RUN mv /app/swag /bin/swag
 
 WORKDIR /code/
+ENV GOFLAGS=-buildvcs=false
 
 ENTRYPOINT ["/bin/swag"]
