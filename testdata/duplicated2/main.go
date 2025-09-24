@@ -3,7 +3,7 @@ package composition
 import (
 	"net/http"
 
-	"github.com/jmaitrehenry/swag/v2/testdata/duplicated2/api"
+	"github.com/jmaitrehenry/swag/testdata/duplicated2/api"
 )
 
 // @title Swagger Example API

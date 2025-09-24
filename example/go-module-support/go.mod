@@ -2,9 +2,11 @@ module github.com/jmaitrehenry/swag/example/go-module-support
 
 go 1.23.0
 
+replace github.com/jmaitrehenry/swag v1.9.1 => ../..
+
 require (
 	github.com/gin-gonic/gin v1.11.0
-	github.com/jmaitrehenry/swag v2.0.0
+	github.com/jmaitrehenry/swag v1.9.1
 	github.com/swaggo/examples v0.0.0-20190624100559-f57286ab550c
 )
 

@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/gofrs/uuid"
-	"github.com/jmaitrehenry/swag/v2/testdata/v3/simple/cross"
+	"github.com/jmaitrehenry/swag/testdata/v3/simple/cross"
 	"github.com/shopspring/decimal"
 )
 

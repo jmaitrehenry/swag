@@ -71,7 +71,7 @@ Swag converts Go annotations to Swagger Documentation 2.0. We've created a varie
 
 2. Install swag by using:
 ```sh
-go install github.com/jmaitrehenry/swag/v2/cmd/swag@latest
+go install github.com/jmaitrehenry/swag/cmd/swag@latest
 ```
 To build from source you need [Go](https://golang.org/dl/) (1.19 or newer).
 

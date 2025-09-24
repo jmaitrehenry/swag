@@ -3,7 +3,7 @@
 package docs
 
 import (
-	swag "github.com/jmaitrehenry/swag/v2"
+	swag "github.com/jmaitrehenry/swag"
 )
 
 const docTemplate = `{

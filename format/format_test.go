@@ -139,7 +139,7 @@ var testFiles = map[string][]byte{
 		import (
 			"net/http"
 
-			"github.com/jmaitrehenry/swag/v2/format/testdata/api"
+			"github.com/jmaitrehenry/swag/format/testdata/api"
 		)
 
 		// @title Swagger Example API

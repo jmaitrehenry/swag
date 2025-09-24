@@ -3,8 +3,8 @@ package main
 import (
 	"net/http"
 
-	"github.com/jmaitrehenry/swag/v2/example/basic/api"
-	goapi "github.com/jmaitrehenry/swag/v2/testdata/golist/api"
+	"github.com/jmaitrehenry/swag/example/basic/api"
+	goapi "github.com/jmaitrehenry/swag/testdata/golist/api"
 )
 
 // @title Swagger Example API

@@ -1,8 +1,8 @@
 package api
 
 import (
-	_ "github.com/jmaitrehenry/swag/v2/testdata/generics_package_alias/external/external4"
-	_ "github.com/jmaitrehenry/swag/v2/testdata/generics_package_alias/internal/path1/v1"
+	_ "github.com/jmaitrehenry/swag/testdata/generics_package_alias/external/external4"
+	_ "github.com/jmaitrehenry/swag/testdata/generics_package_alias/internal/path1/v1"
 )
 
 // @Summary Create movie

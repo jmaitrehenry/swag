@@ -1,7 +1,7 @@
 package data
 
 import (
-	typesapplication "github.com/jmaitrehenry/swag/v2/testdata/global_override/types"
+	typesapplication "github.com/jmaitrehenry/swag/testdata/global_override/types"
 )
 
 type ApplicationResponse struct {

@@ -1,8 +1,8 @@
 package api
 
 import (
-	myv1 "github.com/jmaitrehenry/swag/v2/testdata/generics_package_alias/internal/path1/v1"
-	myv2 "github.com/jmaitrehenry/swag/v2/testdata/generics_package_alias/internal/path2/v1"
+	myv1 "github.com/jmaitrehenry/swag/testdata/generics_package_alias/internal/path1/v1"
+	myv2 "github.com/jmaitrehenry/swag/testdata/generics_package_alias/internal/path2/v1"
 )
 
 // @Summary Create movie
