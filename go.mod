@@ -1,6 +1,6 @@
 module github.com/jmaitrehenry/swag
 
-go 1.27.0
+go 1.26.0
 
 require (
 	github.com/KyleBanks/depth v1.2.1
