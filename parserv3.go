@@ -569,7 +569,9 @@ func (p *Parser) ParseRouterAPIInfoV3(fileInfo *AstFileInfo) error {
 }
 
 func processRouterOperationV3(p *Parser, o *OperationV3) error {
-	if o.Responses != nil && o.Responses.Spec != nil &&
+	// Only warn for actual route operations: plain functions with a doc comment
+	// are visited too and must not trigger this warning.
+	if len(o.RouterProperties) > 0 && o.Responses != nil && o.Responses.Spec != nil &&
 		len(o.Responses.Spec.Response) == 0 && o.Responses.Spec.Default == nil {
 		p.debug.Printf("warning: operation has no documented responses (missing @Success/@Failure/@Response)")
 	}
