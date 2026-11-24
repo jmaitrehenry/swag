@@ -160,3 +160,30 @@ func GetOneOfTypes() {
 func GetPetByID() {
 
 }
+
+// @Summary Add a new pet
+// @Param cat body web.Cat false "cat description"
+// @Param dog body web.Dog false "dog description"
+// @Param fish body web.Fish false "fish description"
+// @Param catchedFish body web.CatchedFishForm false "fish description"
+// @Success 200 {object} web.Pet "Pet added successfully"
+// @Router /pets [post]
+func AddPet() {
+
+}
+
+// @Summary Get pet by ID with discriminator
+// @Param id path string true "ID"
+// @Discriminator pet_type cat=#/components/schemas/web.Cat,dog=#/components/schemas/web.Dog
+// @Success 200 {object} web.Cat
+// @Success 200 {object} web.Dog
+// @Router /pets/{id}/discriminated [get]
+func GetPetByIDDiscriminated() {}
+
+// @Summary Get pet by ID with discriminator (no mapping)
+// @Param id path string true "ID"
+// @Discriminator pet_type
+// @Success 200 {object} web.Cat
+// @Success 200 {object} web.Dog
+// @Router /pets/{id}/no-mapping [get]
+func GetPetByIDNoMapping() {}

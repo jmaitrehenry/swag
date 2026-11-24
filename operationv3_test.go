@@ -1,6 +1,7 @@
 package swag
 
 import (
+	"encoding/json"
 	"go/ast"
 	goparser "go/parser"
 	"go/token"
@@ -769,6 +770,21 @@ func TestParseResponseCommentParamMissingV3(t *testing.T) {
 	assert.EqualError(t, paramLenErr, `can not parse response comment "notIntCode "it ok""`)
 }
 
+func TestNewOperationV3ResponsesNeverNilV3(t *testing.T) {
+	t.Parallel()
+
+	operation := NewOperationV3(New())
+
+	require.NotNil(t, operation.Responses)
+	require.NotNil(t, operation.Responses.Spec)
+	assert.NotNil(t, operation.Responses.Spec.Response, "Response map must be non-nil so it marshals as {} rather than null")
+	assert.Empty(t, operation.Responses.Spec.Response)
+
+	data, err := json.Marshal(operation.Responses.Spec)
+	require.NoError(t, err)
+	assert.Equal(t, "{}", string(data), "an operation with no @Success/@Failure/@Response must marshal responses as {}, not null")
+}
+
 func TestOperation_ParseParamCommentV3(t *testing.T) {
 	t.Parallel()
 
@@ -910,6 +926,96 @@ func TestOperation_ParseParamCommentV3(t *testing.T) {
 				Spec: &spec.Parameter{
 					Name: "t2",
 					In:   "query",
+					Schema: &spec.RefOrSpec[spec.Schema]{
+						Spec: &spec.Schema{
+							JsonSchema: spec.JsonSchema{
+								JsonSchemaCore: spec.JsonSchemaCore{
+									Type: &typeString,
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		assert.Len(t, o.Parameters, 2)
+		tFound := false
+		t2Found := false
+		for _, param := range o.Parameters {
+			switch param.Spec.Spec.Name {
+			case "t":
+				assert.EqualValues(t, expectedT, param)
+				tFound = true
+			case "t2":
+				assert.EqualValues(t, expectedT2, param)
+				t2Found = true
+			default:
+				assert.Fail(t, "unexpected result")
+			}
+		}
+
+		assert.True(t, tFound, "results should contain t")
+		assert.True(t, t2Found, "results should contain t2")
+	})
+
+	t.Run("struct headers", func(t *testing.T) {
+		t.Parallel()
+		parser := New()
+		parser.packages.uniqueDefinitions["main.Object"] = &TypeSpecDef{
+			File: &ast.File{Name: &ast.Ident{Name: "test"}},
+			TypeSpec: &ast.TypeSpec{
+				Name:       &ast.Ident{Name: "Field"},
+				TypeParams: &ast.FieldList{List: []*ast.Field{{Names: []*ast.Ident{{Name: "T"}}}}},
+				Type: &ast.StructType{
+					Struct: 100,
+					Fields: &ast.FieldList{
+						List: []*ast.Field{
+							{
+								Names: []*ast.Ident{
+									{Name: "T"},
+								},
+								Type: ast.NewIdent("string"),
+							},
+							{
+								Names: []*ast.Ident{
+									{Name: "T2"},
+								},
+								Type: ast.NewIdent("string"),
+							},
+						},
+					},
+				},
+			},
+		}
+		o := NewOperationV3(parser)
+		err := o.ParseComment(`@Param some_object header main.Object true "Some Object"`,
+			nil)
+
+		assert.NoError(t, err)
+
+		expectedT := &spec.RefOrSpec[spec.Extendable[spec.Parameter]]{
+			Spec: &spec.Extendable[spec.Parameter]{
+				Spec: &spec.Parameter{
+					Name: "t",
+					In:   "header",
+					Schema: &spec.RefOrSpec[spec.Schema]{
+						Spec: &spec.Schema{
+							JsonSchema: spec.JsonSchema{
+								JsonSchemaCore: spec.JsonSchemaCore{
+									Type: &typeString,
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		expectedT2 := &spec.RefOrSpec[spec.Extendable[spec.Parameter]]{
+			Spec: &spec.Extendable[spec.Parameter]{
+				Spec: &spec.Parameter{
+					Name: "t2",
+					In:   "header",
 					Schema: &spec.RefOrSpec[spec.Schema]{
 						Spec: &spec.Schema{
 							JsonSchema: spec.JsonSchema{
@@ -1092,6 +1198,31 @@ func TestParseParamCommentByBodyTypeV3(t *testing.T) {
 	assert.Equal(t, "#/components/schemas/model.OrderRow", requestBodySpec.Content["application/json"].Spec.Schema.Ref.Ref)
 }
 
+func TestParseParamCommentByBodyTypeV3WithAcceptDefaultSchema(t *testing.T) {
+	t.Parallel()
+
+	acceptComment := `//@Accept json`
+	bodyComment := `@Param request body model.OrderRow true "Some ID"`
+	operation := NewOperationV3(New())
+
+	operation.parser.addTestType("model.OrderRow")
+
+	err := operation.ParseComment(acceptComment, nil)
+	require.NoError(t, err)
+
+	err = operation.ParseComment(bodyComment, nil)
+	require.NoError(t, err)
+
+	requestBody := operation.RequestBody
+	require.NotNil(t, requestBody)
+
+	schema := requestBody.Spec.Spec.Content["application/json"].Spec.Schema
+	require.NotNil(t, schema)
+	require.NotNil(t, schema.Ref)
+	assert.Equal(t, "#/components/schemas/model.OrderRow", schema.Ref.Ref)
+	assert.Nil(t, schema.Spec)
+}
+
 func TestParseParamCommentByBodyTextPlainV3(t *testing.T) {
 	t.Parallel()
 
@@ -1204,11 +1335,33 @@ func TestParseParamCommentByFormDataTypeV3(t *testing.T) {
 	requestBody := operation.RequestBody
 	assert.True(t, requestBody.Spec.Spec.Required)
 	assert.Equal(t, "this is a test file", requestBody.Spec.Spec.Description)
-	assert.NotNil(t, requestBody)
 
 	requestBodySpec := requestBody.Spec.Spec
 	assert.NotNil(t, requestBodySpec)
-	assert.Equal(t, &typeFile, requestBodySpec.Content["application/x-www-form-urlencoded"].Spec.Schema.Spec.Type)
+
+	media := requestBodySpec.Content["multipart/form-data"]
+	if assert.NotNil(t, media) {
+		if assert.NotNil(t, media.Spec.Schema) && assert.NotNil(t, media.Spec.Schema.Spec) {
+			assert.Equal(
+				t,
+				&spec.SingleOrArray[string]{OBJECT},
+				media.Spec.Schema.Spec.Type,
+			)
+
+			prop := media.Spec.Schema.Spec.Properties["file"]
+			if assert.NotNil(t, prop) && assert.NotNil(t, prop.Spec) {
+				assert.Equal(
+					t,
+					&spec.SingleOrArray[string]{STRING},
+					prop.Spec.Type,
+				)
+				assert.Equal(t, "binary", prop.Spec.Format)
+				assert.Equal(t, "this is a test file", prop.Spec.Description)
+			}
+
+			assert.Contains(t, media.Spec.Schema.Spec.Required, "file")
+		}
+	}
 }
 
 func TestParseParamCommentByFormDataTypeUint64V3(t *testing.T) {
@@ -1228,7 +1381,144 @@ func TestParseParamCommentByFormDataTypeUint64V3(t *testing.T) {
 
 	requestBodySpec := requestBody.Spec.Spec.Content["application/x-www-form-urlencoded"].Spec
 	assert.NotNil(t, requestBodySpec)
-	assert.Equal(t, &typeInteger, requestBodySpec.Schema.Spec.Type)
+	assert.Equal(t, &typeObject, requestBodySpec.Schema.Spec.Type)
+
+	prop := requestBodySpec.Schema.Spec.Properties["file"]
+	if assert.NotNil(t, prop) && assert.NotNil(t, prop.Spec) {
+		assert.Equal(t, &typeInteger, prop.Spec.Type)
+	}
+
+	assert.Contains(t, requestBodySpec.Schema.Spec.Required, "file")
+}
+
+func TestParseParamCommentByFormDataTypeFileArrayV3(t *testing.T) {
+	t.Parallel()
+
+	comment := `@Param files formData []file true "multiple files"`
+	operation := NewOperationV3(New())
+
+	err := operation.ParseComment(comment, nil)
+	require.NoError(t, err)
+
+	assert.Len(t, operation.Parameters, 0)
+
+	requestBody := operation.RequestBody
+	require.NotNil(t, requestBody)
+	assert.Equal(t, "multiple files", requestBody.Spec.Spec.Description)
+
+	media := requestBody.Spec.Spec.Content["multipart/form-data"]
+	require.NotNil(t, media)
+	require.NotNil(t, media.Spec.Schema)
+	require.NotNil(t, media.Spec.Schema.Spec)
+
+	prop := media.Spec.Schema.Spec.Properties["files"]
+	require.NotNil(t, prop)
+	require.NotNil(t, prop.Spec)
+	assert.Equal(t, &typeArray, prop.Spec.Type)
+
+	require.NotNil(t, prop.Spec.Items)
+	require.NotNil(t, prop.Spec.Items.Schema)
+	require.NotNil(t, prop.Spec.Items.Schema.Spec)
+	assert.Equal(t, &typeString, prop.Spec.Items.Schema.Spec.Type)
+	assert.Equal(t, "binary", prop.Spec.Items.Schema.Spec.Format)
+
+	assert.Contains(t, media.Spec.Schema.Spec.Required, "files")
+}
+
+func TestParseParamCommentByFormDataMultipleParamsMultipartV3(t *testing.T) {
+	t.Parallel()
+
+	operation := NewOperationV3(New())
+
+	comments := []string{
+		`@Accept multipart/form-data`,
+		`@Param zip formData file true "Zip file containing checks.toml, users.toml, and/or settings.toml"`,
+		`@Param destructiveChecks formData boolean false "If true, destructively replace existing checks during checks.toml import"`,
+		`@Param destructiveUsers formData boolean false "If true, destructively replace existing users during users.toml import"`,
+		`@Param destructiveSettings formData boolean false "If true, destructively replace existing settings during settings.toml import"`,
+	}
+
+	for _, comment := range comments {
+		err := operation.ParseComment(comment, nil)
+		require.NoError(t, err)
+	}
+
+	requestBody := operation.RequestBody
+	require.NotNil(t, requestBody)
+
+	media := requestBody.Spec.Spec.Content["multipart/form-data"]
+	require.NotNil(t, media)
+	require.NotNil(t, media.Spec.Schema)
+	require.NotNil(t, media.Spec.Schema.Spec)
+
+	schema := media.Spec.Schema.Spec
+	assert.Equal(t, &typeObject, schema.Type)
+	assert.Nil(t, schema.OneOf, "multiple formData params must not be bundled into oneOf")
+	assert.Len(t, schema.Properties, 4)
+
+	zip := schema.Properties["zip"]
+	if assert.NotNil(t, zip) && assert.NotNil(t, zip.Spec) {
+		assert.Equal(t, &typeString, zip.Spec.Type)
+		assert.Equal(t, "binary", zip.Spec.Format)
+	}
+
+	for _, name := range []string{"destructiveChecks", "destructiveUsers", "destructiveSettings"} {
+		prop := schema.Properties[name]
+		if assert.NotNil(t, prop) && assert.NotNil(t, prop.Spec) {
+			assert.Equal(t, &spec.SingleOrArray[string]{BOOLEAN}, prop.Spec.Type)
+		}
+	}
+
+	assert.ElementsMatch(t, []string{"zip"}, schema.Required)
+}
+
+func TestParseParamCommentByFormDataMultipleParamsURLEncodedV3(t *testing.T) {
+	t.Parallel()
+
+	operation := NewOperationV3(New())
+
+	comments := []string{
+		`@Accept application/x-www-form-urlencoded`,
+		`@Param id formData int true "Check ID to update"`,
+		`@Param name formData string false "Update check name"`,
+		`@Param weight formData int false "Update check weight"`,
+		`@Param activated formData boolean false "Update check activation"`,
+	}
+
+	for _, comment := range comments {
+		err := operation.ParseComment(comment, nil)
+		require.NoError(t, err)
+	}
+
+	requestBody := operation.RequestBody
+	require.NotNil(t, requestBody)
+
+	media := requestBody.Spec.Spec.Content["application/x-www-form-urlencoded"]
+	require.NotNil(t, media)
+	require.NotNil(t, media.Spec.Schema)
+	require.NotNil(t, media.Spec.Schema.Spec)
+
+	schema := media.Spec.Schema.Spec
+	assert.Equal(t, &typeObject, schema.Type)
+	assert.Nil(t, schema.OneOf, "multiple formData params must not be bundled into oneOf")
+	assert.Len(t, schema.Properties, 4)
+
+	id := schema.Properties["id"]
+	if assert.NotNil(t, id) && assert.NotNil(t, id.Spec) {
+		assert.Equal(t, &typeInteger, id.Spec.Type)
+	}
+
+	name := schema.Properties["name"]
+	if assert.NotNil(t, name) && assert.NotNil(t, name.Spec) {
+		assert.Equal(t, &typeString, name.Spec.Type)
+	}
+
+	activated := schema.Properties["activated"]
+	if assert.NotNil(t, activated) && assert.NotNil(t, activated.Spec) {
+		assert.Equal(t, &spec.SingleOrArray[string]{BOOLEAN}, activated.Spec.Type)
+	}
+
+	assert.ElementsMatch(t, []string{"id"}, schema.Required)
 }
 
 func TestParseParamCommentByNotSupportedTypeV3(t *testing.T) {
@@ -2081,4 +2371,307 @@ func TestParseServerCommentV3(t *testing.T) {
 	assert.Equal(t, "override path 1", operation.Servers[0].Spec.Description)
 	assert.Equal(t, "https://api.example.com/v2", operation.Servers[1].Spec.URL)
 	assert.Equal(t, "override path 2", operation.Servers[1].Spec.Description)
+}
+
+func TestResponseSchemaWithCustomMimeTypeV3(t *testing.T) {
+	t.Parallel()
+
+	t.Run("Schema ref is correctly associated with custom MIME type", func(t *testing.T) {
+		t.Parallel()
+
+		// Create operation with parser to handle the type reference
+		parser := New()
+		operation := NewOperationV3(parser)
+
+		// Create a mock type in the parser as a stand-in for model.OrderRow
+		parser.addTestType("model.OrderRow")
+
+		// First, set the response MIME type with @Produce
+		err := operation.ParseComment("/@Produce json-api", nil)
+		require.NoError(t, err)
+
+		// Then set the response with @Success
+		err = operation.ParseComment("/@Success 200 {object} model.OrderRow", nil)
+		require.NoError(t, err)
+
+		// Check that we have a response for status code 200
+		response, exists := operation.Responses.Spec.Response["200"]
+		require.True(t, exists, "Response for status code 200 should exist")
+
+		// Verify the correct MIME type (json-api -> application/vnd.api+json) has the schema reference
+		content := response.Spec.Spec.Content
+		require.NotNil(t, content, "Response content should not be nil")
+
+		// Check that application/vnd.api+json exists in the content map
+		apiJsonContent, exists := content["application/vnd.api+json"]
+		require.True(t, exists, "application/vnd.api+json content should exist")
+
+		// Verify the schema reference is correct
+		require.NotNil(t, apiJsonContent.Spec.Schema, "Schema should not be nil")
+		require.NotNil(t, apiJsonContent.Spec.Schema.Ref, "Schema ref should not be nil")
+		require.Equal(t, "#/components/schemas/model.OrderRow", apiJsonContent.Spec.Schema.Ref.Ref)
+
+		// Make sure the schema is NOT also defined under application/json
+		_, exists = content["application/json"]
+		require.False(t, exists, "application/json content should not exist when only json-api was specified")
+	})
+
+	t.Run("Default to application/json when no MIME type is specified", func(t *testing.T) {
+		t.Parallel()
+
+		// Create operation with parser to handle the type reference
+		parser := New()
+		operation := NewOperationV3(parser)
+
+		// Create a mock type in the parser
+		parser.addTestType("model.OrderRow")
+
+		// Only set the response with @Success, without any @Produce
+		err := operation.ParseComment("/@Success 200 {object} model.OrderRow", nil)
+		require.NoError(t, err)
+
+		// Check that we have a response for status code 200
+		response, exists := operation.Responses.Spec.Response["200"]
+		require.True(t, exists, "Response for status code 200 should exist")
+
+		// Verify application/json has the schema reference
+		content := response.Spec.Spec.Content
+		require.NotNil(t, content, "Response content should not be nil")
+
+		// Check that application/json exists in the content map
+		jsonContent, exists := content["application/json"]
+		require.True(t, exists, "application/json content should exist")
+
+		// Verify the schema reference is correct
+		require.NotNil(t, jsonContent.Spec.Schema, "Schema should not be nil")
+		require.NotNil(t, jsonContent.Spec.Schema.Ref, "Schema ref should not be nil")
+		require.Equal(t, "#/components/schemas/model.OrderRow", jsonContent.Spec.Schema.Ref.Ref)
+	})
+
+	t.Run("Multiple MIME types have the same schema reference", func(t *testing.T) {
+		t.Parallel()
+
+		// Create operation with parser to handle the type reference
+		parser := New()
+		operation := NewOperationV3(parser)
+
+		// Create a mock type in the parser
+		parser.addTestType("model.OrderRow")
+
+		// Set multiple MIME types
+		err := operation.ParseComment("/@Produce json,json-api", nil)
+		require.NoError(t, err)
+
+		// Set the response
+		err = operation.ParseComment("/@Success 200 {object} model.OrderRow", nil)
+		require.NoError(t, err)
+
+		// Check that we have a response for status code 200
+		response, exists := operation.Responses.Spec.Response["200"]
+		require.True(t, exists, "Response for status code 200 should exist")
+
+		// Verify both MIME types have the schema reference
+		content := response.Spec.Spec.Content
+		require.NotNil(t, content, "Response content should not be nil")
+
+		// Check application/json
+		jsonContent, exists := content["application/json"]
+		require.True(t, exists, "application/json content should exist")
+		require.NotNil(t, jsonContent.Spec.Schema, "Schema should not be nil")
+		require.NotNil(t, jsonContent.Spec.Schema.Ref, "Schema ref should not be nil")
+		require.Equal(t, "#/components/schemas/model.OrderRow", jsonContent.Spec.Schema.Ref.Ref)
+
+		// Check application/vnd.api+json
+		apiJsonContent, exists := content["application/vnd.api+json"]
+		require.True(t, exists, "application/vnd.api+json content should exist")
+		require.NotNil(t, apiJsonContent.Spec.Schema, "Schema should not be nil")
+		require.NotNil(t, apiJsonContent.Spec.Schema.Ref, "Schema ref should not be nil")
+		require.Equal(t, "#/components/schemas/model.OrderRow", apiJsonContent.Spec.Schema.Ref.Ref)
+	})
+}
+
+func TestParseDiscriminatorCommentPropertyNameOnlyV3(t *testing.T) {
+	t.Parallel()
+
+	operation := NewOperationV3(nil)
+	err := operation.ParseComment("/@Discriminator pet_type", nil)
+	require.NoError(t, err)
+	require.NotNil(t, operation.discriminatorInfo)
+	assert.Equal(t, "pet_type", operation.discriminatorInfo.propertyName)
+	assert.Nil(t, operation.discriminatorInfo.mapping)
+}
+
+func TestParseDiscriminatorCommentWithMappingV3(t *testing.T) {
+	t.Parallel()
+
+	operation := NewOperationV3(nil)
+	err := operation.ParseComment("/@Discriminator pet_type cat=#/components/schemas/web.Cat,dog=#/components/schemas/web.Dog", nil)
+	require.NoError(t, err)
+	require.NotNil(t, operation.discriminatorInfo)
+	assert.Equal(t, "pet_type", operation.discriminatorInfo.propertyName)
+	require.NotNil(t, operation.discriminatorInfo.mapping)
+	assert.Equal(t, "#/components/schemas/web.Cat", operation.discriminatorInfo.mapping["cat"])
+	assert.Equal(t, "#/components/schemas/web.Dog", operation.discriminatorInfo.mapping["dog"])
+}
+
+func TestParseDiscriminatorCommentEmptyV3(t *testing.T) {
+	t.Parallel()
+
+	operation := NewOperationV3(nil)
+	err := operation.ParseDiscriminatorComment("")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "propertyName")
+}
+
+func TestParseDiscriminatorCommentDuplicateV3(t *testing.T) {
+	t.Parallel()
+
+	operation := NewOperationV3(nil)
+	err := operation.ParseComment("/@Discriminator pet_type", nil)
+	require.NoError(t, err)
+	err = operation.ParseComment("/@Discriminator other_type", nil)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "already defined")
+}
+
+func TestParseDiscriminatorCommentMalformedMappingV3(t *testing.T) {
+	t.Parallel()
+
+	operation := NewOperationV3(nil)
+	err := operation.ParseComment("/@Discriminator pet_type cat-no-equals", nil)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "mapping")
+}
+
+func TestProcessDiscriminatorCommentNoOpWhenNilV3(t *testing.T) {
+	t.Parallel()
+
+	operation := NewOperationV3(nil)
+	err := operation.ProcessDiscriminatorComment()
+	require.NoError(t, err)
+	// Responses still intact, nothing changed
+	require.NotNil(t, operation.Responses)
+}
+
+func TestProcessDiscriminatorCommentAppliedToOneOfV3(t *testing.T) {
+	t.Parallel()
+
+	operation := NewOperationV3(nil)
+	err := operation.ParseComment("/@Discriminator pet_type", nil)
+	require.NoError(t, err)
+
+	// Simulate two @Success that produce a oneOf
+	schema1 := spec.NewSchemaRef(spec.NewRef("#/components/schemas/web.Cat"))
+	schema2 := spec.NewSchemaRef(spec.NewRef("#/components/schemas/web.Dog"))
+	oneOfSchema := spec.NewSchemaSpec()
+	oneOfSchema.Spec.OneOf = []*spec.RefOrSpec[spec.Schema]{schema1, schema2}
+
+	response := spec.NewResponseSpec()
+	response.Spec.Spec.Description = "OK"
+	response.Spec.Spec.Content = map[string]*spec.Extendable[spec.MediaType]{
+		"application/json": {
+			Spec: &spec.MediaType{Schema: oneOfSchema},
+		},
+	}
+	operation.Responses.Spec.Response = map[string]*spec.RefOrSpec[spec.Extendable[spec.Response]]{
+		"200": response,
+	}
+
+	err = operation.ProcessDiscriminatorComment()
+	require.NoError(t, err)
+
+	schema := operation.Responses.Spec.Response["200"].Spec.Spec.Content["application/json"].Spec.Schema
+	require.NotNil(t, schema.Spec.Discriminator)
+	assert.Equal(t, "pet_type", schema.Spec.Discriminator.PropertyName)
+	assert.Nil(t, schema.Spec.Discriminator.Mapping)
+}
+
+func TestProcessDiscriminatorCommentWithMappingV3(t *testing.T) {
+	t.Parallel()
+
+	operation := NewOperationV3(nil)
+	err := operation.ParseComment("/@Discriminator pet_type cat=#/components/schemas/web.Cat,dog=#/components/schemas/web.Dog", nil)
+	require.NoError(t, err)
+
+	schema1 := spec.NewSchemaRef(spec.NewRef("#/components/schemas/web.Cat"))
+	schema2 := spec.NewSchemaRef(spec.NewRef("#/components/schemas/web.Dog"))
+	oneOfSchema := spec.NewSchemaSpec()
+	oneOfSchema.Spec.OneOf = []*spec.RefOrSpec[spec.Schema]{schema1, schema2}
+
+	response := spec.NewResponseSpec()
+	response.Spec.Spec.Description = "OK"
+	response.Spec.Spec.Content = map[string]*spec.Extendable[spec.MediaType]{
+		"application/json": {
+			Spec: &spec.MediaType{Schema: oneOfSchema},
+		},
+	}
+	operation.Responses.Spec.Response = map[string]*spec.RefOrSpec[spec.Extendable[spec.Response]]{
+		"200": response,
+	}
+
+	err = operation.ProcessDiscriminatorComment()
+	require.NoError(t, err)
+
+	d := operation.Responses.Spec.Response["200"].Spec.Spec.Content["application/json"].Spec.Schema.Spec.Discriminator
+	require.NotNil(t, d)
+	assert.Equal(t, "pet_type", d.PropertyName)
+	require.NotNil(t, d.Mapping)
+	assert.Equal(t, "#/components/schemas/web.Cat", d.Mapping["cat"])
+	assert.Equal(t, "#/components/schemas/web.Dog", d.Mapping["dog"])
+}
+
+func TestProcessDiscriminatorCommentSkipsNonOneOfV3(t *testing.T) {
+	t.Parallel()
+
+	operation := NewOperationV3(nil)
+	err := operation.ParseComment("/@Discriminator pet_type", nil)
+	require.NoError(t, err)
+
+	// Single schema (no oneOf)
+	singleSchema := spec.NewSchemaRef(spec.NewRef("#/components/schemas/web.Cat"))
+
+	response := spec.NewResponseSpec()
+	response.Spec.Spec.Description = "OK"
+	response.Spec.Spec.Content = map[string]*spec.Extendable[spec.MediaType]{
+		"application/json": {
+			Spec: &spec.MediaType{Schema: singleSchema},
+		},
+	}
+	operation.Responses.Spec.Response = map[string]*spec.RefOrSpec[spec.Extendable[spec.Response]]{
+		"200": response,
+	}
+
+	err = operation.ProcessDiscriminatorComment()
+	require.NoError(t, err)
+
+	// Discriminator must NOT be set on a non-oneOf schema
+	schema := operation.Responses.Spec.Response["200"].Spec.Spec.Content["application/json"].Spec.Schema
+	assert.Nil(t, schema.Spec)
+}
+
+func TestProcessDiscriminatorCommentAppliedToRequestBodyV3(t *testing.T) {
+	t.Parallel()
+
+	operation := NewOperationV3(nil)
+	err := operation.ParseComment("/@Discriminator body_type", nil)
+	require.NoError(t, err)
+
+	schema1 := spec.NewSchemaRef(spec.NewRef("#/components/schemas/web.Cat"))
+	schema2 := spec.NewSchemaRef(spec.NewRef("#/components/schemas/web.Dog"))
+	oneOfSchema := spec.NewSchemaSpec()
+	oneOfSchema.Spec.OneOf = []*spec.RefOrSpec[spec.Schema]{schema1, schema2}
+
+	operation.RequestBody = spec.NewRequestBodySpec()
+	operation.RequestBody.Spec.Spec.Content = map[string]*spec.Extendable[spec.MediaType]{
+		"application/json": {
+			Spec: &spec.MediaType{Schema: oneOfSchema},
+		},
+	}
+
+	err = operation.ProcessDiscriminatorComment()
+	require.NoError(t, err)
+
+	schema := operation.RequestBody.Spec.Spec.Content["application/json"].Spec.Schema
+	require.NotNil(t, schema.Spec.Discriminator)
+	assert.Equal(t, "body_type", schema.Spec.Discriminator.PropertyName)
 }

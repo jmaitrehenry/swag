@@ -132,6 +132,34 @@ func TestDefaultFieldParserV3(t *testing.T) {
 		assert.False(t, got)
 	})
 
+	t.Run("Skipped tag", func(t *testing.T) {
+		t.Parallel()
+
+		got, err := newTagBaseFieldParserV3(
+			&Parser{
+				RequiredByDefault: true,
+			},
+			&ast.File{Name: &ast.Ident{Name: "test"}},
+			&ast.Field{Tag: &ast.BasicLit{
+				Value: `json:"-"`,
+			}},
+		).FieldName()
+		assert.NoError(t, err)
+		assert.Empty(t, got)
+
+		got, err = newTagBaseFieldParserV3(
+			&Parser{
+				RequiredByDefault: true,
+			},
+			&ast.File{Name: &ast.Ident{Name: "test"}},
+			&ast.Field{Tag: &ast.BasicLit{
+				Value: `form:"-"`,
+			}},
+		).FieldName()
+		assert.NoError(t, err)
+		assert.Empty(t, got)
+	})
+
 	t.Run("Extensions tag", func(t *testing.T) {
 		t.Parallel()
 
@@ -184,7 +212,10 @@ func TestDefaultFieldParserV3(t *testing.T) {
 		t.Parallel()
 
 		schema := spec.NewSchemaSpec()
-		schema.Spec.Type = &spec.SingleOrArray[string]{"string"}
+
+		typeArray := spec.NewSingleOrArray("string")
+		schema.Spec.Type = &typeArray
+
 		parser := &Parser{}
 		fieldParser := newTagBaseFieldParserV3(
 			parser,
@@ -207,6 +238,79 @@ func TestDefaultFieldParserV3(t *testing.T) {
 		fieldParser2.ComplementSchema(schema)
 		assert.Equal(t, []interface{}{"a", "b", "c", "d", "e", "f"}, schema.Spec.Enum)
 
+	})
+
+	t.Run("Enums tag on ref schema does not mutate component schema", func(t *testing.T) {
+		t.Parallel()
+
+		parser := New()
+		parser.openAPIVersion = true
+
+		componentSchema := spec.NewSchemaSpec()
+		componentSchema.Spec.Type = &spec.SingleOrArray[string]{STRING}
+		componentSchema.Spec.Enum = []interface{}{"image", "video"}
+		componentSchema.Spec.Extensions = map[string]any{
+			enumVarNamesExtension: []string{"PostTypeImage", "PostTypeVideo"},
+		}
+		parser.openAPI.Components.Spec.Schemas = map[string]*spec.RefOrSpec[spec.Schema]{
+			"PostType": componentSchema,
+		}
+
+		schema := spec.NewRefOrSpec[spec.Schema](spec.NewRef("#/components/schemas/PostType"), nil)
+
+		err := newTagBaseFieldParserV3(
+			parser,
+			&ast.File{Name: &ast.Ident{Name: "test"}},
+			&ast.Field{
+				Names: []*ast.Ident{{Name: "Type"}},
+				Tag: &ast.BasicLit{
+					Value: `json:"type" validate:"oneof=video image" example:"video"`,
+				},
+			},
+		).ComplementSchema(schema)
+		assert.NoError(t, err)
+
+		assert.Equal(t, []interface{}{"image", "video"}, componentSchema.Spec.Enum)
+		assert.Equal(t, []string{"PostTypeImage", "PostTypeVideo"}, componentSchema.Spec.Extensions[enumVarNamesExtension])
+		if assert.NotNil(t, schema.Spec) {
+			assert.Equal(t, "video", schema.Spec.Example)
+			assert.Equal(t, "#/components/schemas/PostType", schema.Spec.Extensions["$ref"])
+			assert.Empty(t, schema.Spec.Enum)
+		}
+	})
+
+	t.Run("Enums tag on array item ref schema does not mutate component schema", func(t *testing.T) {
+		t.Parallel()
+
+		parser := New()
+		parser.openAPIVersion = true
+
+		componentSchema := spec.NewSchemaSpec()
+		componentSchema.Spec.Type = &spec.SingleOrArray[string]{STRING}
+		componentSchema.Spec.Enum = []interface{}{"image", "video"}
+		parser.openAPI.Components.Spec.Schemas = map[string]*spec.RefOrSpec[spec.Schema]{
+			"PostType": componentSchema,
+		}
+
+		schema := spec.NewSchemaSpec()
+		schema.Spec.Type = &spec.SingleOrArray[string]{ARRAY}
+		schema.Spec.Items = spec.NewBoolOrSchema(false, spec.NewRefOrSpec[spec.Schema](spec.NewRef("#/components/schemas/PostType"), nil))
+
+		err := newTagBaseFieldParserV3(
+			parser,
+			&ast.File{Name: &ast.Ident{Name: "test"}},
+			&ast.Field{
+				Names: []*ast.Ident{{Name: "Types"}},
+				Tag: &ast.BasicLit{
+					Value: `json:"types" validate:"oneof=video image"`,
+				},
+			},
+		).ComplementSchema(schema)
+		assert.NoError(t, err)
+
+		assert.Equal(t, []interface{}{"image", "video"}, componentSchema.Spec.Enum)
+		assert.Equal(t, "#/components/schemas/PostType", schema.Spec.Items.Schema.Ref.Ref)
+		assert.Nil(t, schema.Spec.Items.Schema.Spec)
 	})
 
 	t.Run("EnumVarNames tag", func(t *testing.T) {
@@ -758,5 +862,44 @@ func TestValidTagsV3(t *testing.T) {
 		).ComplementSchema(schema)
 		assert.NoError(t, err)
 		assert.Equal(t, "^[a-zA-Z0-9_]*$", schema.Spec.Pattern)
+	})
+}
+
+func TestShouldSkipV3(t *testing.T) {
+	t.Parallel()
+
+	parser := func(tag string) FieldParserV3 {
+		field := &ast.Field{Names: []*ast.Ident{{Name: "Field"}}}
+		if tag != "" {
+			field.Tag = &ast.BasicLit{Value: tag}
+		}
+		return newTagBaseFieldParserV3(&Parser{}, &ast.File{Name: &ast.Ident{Name: "test"}}, field)
+	}
+
+	t.Run("no tag is kept", func(t *testing.T) {
+		t.Parallel()
+		assert.False(t, parser("").ShouldSkip())
+	})
+
+	t.Run("explicit json dash is skipped", func(t *testing.T) {
+		t.Parallel()
+		assert.True(t, parser(`json:"-"`).ShouldSkip())
+	})
+
+	t.Run("json name is kept", func(t *testing.T) {
+		t.Parallel()
+		assert.False(t, parser(`json:"name"`).ShouldSkip())
+	})
+
+	t.Run("tag without json name is kept", func(t *testing.T) {
+		t.Parallel()
+		// e.g. structs serialized to both XML and JSON: encoding/json still
+		// emits the field under its Go name.
+		assert.False(t, parser(`xml:"name"`).ShouldSkip())
+	})
+
+	t.Run("swaggerignore is skipped", func(t *testing.T) {
+		t.Parallel()
+		assert.True(t, parser(`swaggerignore:"true"`).ShouldSkip())
 	})
 }

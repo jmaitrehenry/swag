@@ -72,6 +72,7 @@ const (
 	xCodeSamplesAttrOriginal = "@x-codeSamples"
 	scopeAttrPrefix          = "@scope."
 	stateAttr                = "@state"
+	discriminatorAttr        = "@discriminator"
 )
 
 // ParseFlag determine what to parse
@@ -1395,8 +1396,13 @@ func (parser *Parser) ParseDefinition(typeSpecDef *TypeSpecDef) (*Schema, error)
 	if parser.isInStructStack(typeSpecDef) {
 		parser.debug.Printf("Skipping '%s', recursion detected.", typeName)
 
+		schemaName := typeName
+		if typeSpecDef.SchemaName != "" {
+			schemaName = typeSpecDef.SchemaName
+		}
+
 		return &Schema{
-				Name:    typeName,
+				Name:    schemaName,
 				PkgPath: typeSpecDef.PkgPath,
 				Schema:  PrimitiveSchema(OBJECT),
 			},

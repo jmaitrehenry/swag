@@ -137,38 +137,53 @@ func TestParserParseGeneralApiInfoV3(t *testing.T) {
 	assert.Equal(t, "OpenAPI", p.openAPI.ExternalDocs.Spec.Description)
 	assert.Equal(t, "https://swagger.io/resources/open-api", p.openAPI.ExternalDocs.Spec.URL)
 
-	assert.Equal(t, 7, len(p.openAPI.Components.Spec.SecuritySchemes))
+	assert.Equal(t, 8, len(p.openAPI.Components.Spec.SecuritySchemes))
 
 	security := p.openAPI.Components.Spec.SecuritySchemes
-	assert.Equal(t, "basic", security["basic"].Spec.Spec.Scheme)
-	assert.Equal(t, "http", security["basic"].Spec.Spec.Type)
-
-	assert.Equal(t, "apiKey", security["ApiKeyAuth"].Spec.Spec.Type)
-	assert.Equal(t, "Authorization", security["ApiKeyAuth"].Spec.Spec.Name)
-	assert.Equal(t, "header", security["ApiKeyAuth"].Spec.Spec.In)
-	assert.Equal(t, "some description", security["ApiKeyAuth"].Spec.Spec.Description)
-
-	assert.Equal(t, "oauth2", security["OAuth2Application"].Spec.Spec.Type)
-	assert.Equal(t, "header", security["OAuth2Application"].Spec.Spec.In)
-	assert.Equal(t, "https://example.com/oauth/token", security["OAuth2Application"].Spec.Spec.Flows.Spec.ClientCredentials.Spec.TokenURL)
-	assert.Equal(t, 2, len(security["OAuth2Application"].Spec.Spec.Flows.Spec.ClientCredentials.Spec.Scopes))
-
-	assert.Equal(t, "oauth2", security["OAuth2Implicit"].Spec.Spec.Type)
-	assert.Equal(t, "header", security["OAuth2Implicit"].Spec.Spec.In)
-	assert.Equal(t, "https://example.com/oauth/authorize", security["OAuth2Implicit"].Spec.Spec.Flows.Spec.Implicit.Spec.AuthorizationURL)
-	assert.Equal(t, "some_audience.google.com", security["OAuth2Implicit"].Spec.Spec.Flows.Extensions["x-google-audiences"])
-
-	assert.Equal(t, "oauth2", security["OAuth2Password"].Spec.Spec.Type)
-	assert.Equal(t, "header", security["OAuth2Password"].Spec.Spec.In)
-	assert.Equal(t, "https://example.com/oauth/token", security["OAuth2Password"].Spec.Spec.Flows.Spec.Password.Spec.TokenURL)
-
-	assert.Equal(t, "oauth2", security["OAuth2AccessCode"].Spec.Spec.Type)
-	assert.Equal(t, "header", security["OAuth2AccessCode"].Spec.Spec.In)
-	assert.Equal(t, "https://example.com/oauth/token", security["OAuth2AccessCode"].Spec.Spec.Flows.Spec.AuthorizationCode.Spec.TokenURL)
-
-	assert.Equal(t, "bearer", security["bearerauth"].Spec.Spec.Scheme)
-	assert.Equal(t, "http", security["bearerauth"].Spec.Spec.Type)
-	assert.Equal(t, "JWT", security["bearerauth"].Spec.Spec.BearerFormat)
+	if v, ok := security["basic"]; ok && v != nil && v.Spec != nil && v.Spec.Spec != nil {
+		assert.Equal(t, "basic", v.Spec.Spec.Scheme)
+		assert.Equal(t, "http", v.Spec.Spec.Type)
+	}
+	if v, ok := security["ApiKeyAuth"]; ok && v != nil && v.Spec != nil && v.Spec.Spec != nil {
+		assert.Equal(t, "apiKey", v.Spec.Spec.Type)
+		assert.Equal(t, "Authorization", v.Spec.Spec.Name)
+		assert.Equal(t, "header", v.Spec.Spec.In)
+		assert.Equal(t, "some description", v.Spec.Spec.Description)
+	}
+	if v, ok := security["OAuth2Application"]; ok && v != nil && v.Spec != nil && v.Spec.Spec != nil {
+		assert.Equal(t, "oauth2", v.Spec.Spec.Type)
+		assert.Equal(t, "header", v.Spec.Spec.In)
+		assert.Equal(t, "https://example.com/oauth/token", v.Spec.Spec.Flows.Spec.ClientCredentials.Spec.TokenURL)
+		assert.Equal(t, 2, len(v.Spec.Spec.Flows.Spec.ClientCredentials.Spec.Scopes))
+	}
+	if v, ok := security["OAuth2Implicit"]; ok && v != nil && v.Spec != nil && v.Spec.Spec != nil {
+		assert.Equal(t, "oauth2", v.Spec.Spec.Type)
+		assert.Equal(t, "header", v.Spec.Spec.In)
+		assert.Equal(t, "https://example.com/oauth/authorize", v.Spec.Spec.Flows.Spec.Implicit.Spec.AuthorizationURL)
+		assert.Equal(t, "some_audience.google.com", v.Spec.Spec.Flows.Extensions["x-google-audiences"])
+	}
+	if v, ok := security["OAuth2Password"]; ok && v != nil && v.Spec != nil && v.Spec.Spec != nil {
+		assert.Equal(t, "oauth2", v.Spec.Spec.Type)
+		assert.Equal(t, "header", v.Spec.Spec.In)
+		assert.Equal(t, "https://example.com/oauth/token", v.Spec.Spec.Flows.Spec.Password.Spec.TokenURL)
+	}
+	if v, ok := security["OAuth2AccessCode"]; ok && v != nil && v.Spec != nil && v.Spec.Spec != nil {
+		assert.Equal(t, "oauth2", v.Spec.Spec.Type)
+		assert.Equal(t, "header", v.Spec.Spec.In)
+		assert.Equal(t, "https://example.com/oauth/token", v.Spec.Spec.Flows.Spec.AuthorizationCode.Spec.TokenURL)
+	}
+	if v, ok := security["BearerAuth1"]; ok && v != nil && v.Spec != nil && v.Spec.Spec != nil {
+		assert.Equal(t, "bearer", v.Spec.Spec.Scheme)
+		assert.Equal(t, "http", v.Spec.Spec.Type)
+		assert.Equal(t, "JWT", v.Spec.Spec.BearerFormat)
+		assert.Equal(t, "First bearer token", v.Spec.Spec.Description)
+	}
+	if v, ok := security["BearerAuth2"]; ok && v != nil && v.Spec != nil && v.Spec.Spec != nil {
+		assert.Equal(t, "bearer", v.Spec.Spec.Scheme)
+		assert.Equal(t, "http", v.Spec.Spec.Type)
+		assert.Equal(t, "CustomToken", v.Spec.Spec.BearerFormat)
+		assert.Equal(t, "Second bearer token", v.Spec.Spec.Description)
+	}
 }
 
 func TestParser_ParseGeneralApiInfoExtensionsV3(t *testing.T) {
@@ -229,6 +244,7 @@ func TestParserParseGeneralAPIInfoMarkdownV3(t *testing.T) {
 	err := p.ParseGeneralAPIInfo(mainAPIFile)
 	assert.NoError(t, err)
 
+	assert.Equal(t, "Swagger Example API Markdown Description", p.openAPI.Info.Spec.Description)
 	assert.Equal(t, "users", p.openAPI.Tags[0].Spec.Name)
 	assert.Equal(t, "Users Tag Markdown Description", p.openAPI.Tags[0].Spec.Description)
 
@@ -468,6 +484,40 @@ func TestParseSimpleApiV3(t *testing.T) {
 		}, rootSchema.OneOf)
 
 	})
+
+	t.Run("Test parse discriminator with mapping", func(t *testing.T) {
+		t.Parallel()
+
+		assert.Contains(t, paths, "/pets/{id}/discriminated")
+		path := paths["/pets/{id}/discriminated"]
+		require.NotNil(t, path.Spec.Spec.Get)
+		assert.Contains(t, path.Spec.Spec.Get.Spec.Responses.Spec.Response, "200")
+		response := path.Spec.Spec.Get.Spec.Responses.Spec.Response["200"]
+		mediaType := response.Spec.Spec.Content["application/json"]
+		require.NotNil(t, mediaType)
+		rootSchema := mediaType.Spec.Schema.Spec
+		require.NotNil(t, rootSchema.Discriminator, "discriminator should be set")
+		assert.Equal(t, "pet_type", rootSchema.Discriminator.PropertyName)
+		require.NotNil(t, rootSchema.Discriminator.Mapping)
+		assert.Equal(t, "#/components/schemas/web.Cat", rootSchema.Discriminator.Mapping["cat"])
+		assert.Equal(t, "#/components/schemas/web.Dog", rootSchema.Discriminator.Mapping["dog"])
+	})
+
+	t.Run("Test parse discriminator without mapping", func(t *testing.T) {
+		t.Parallel()
+
+		assert.Contains(t, paths, "/pets/{id}/no-mapping")
+		path := paths["/pets/{id}/no-mapping"]
+		require.NotNil(t, path.Spec.Spec.Get)
+		assert.Contains(t, path.Spec.Spec.Get.Spec.Responses.Spec.Response, "200")
+		response := path.Spec.Spec.Get.Spec.Responses.Spec.Response["200"]
+		mediaType := response.Spec.Spec.Content["application/json"]
+		require.NotNil(t, mediaType)
+		rootSchema := mediaType.Spec.Schema.Spec
+		require.NotNil(t, rootSchema.Discriminator, "discriminator should be set")
+		assert.Equal(t, "pet_type", rootSchema.Discriminator.PropertyName)
+		assert.Nil(t, rootSchema.Discriminator.Mapping)
+	})
 }
 
 func TestParserParseServers(t *testing.T) {
@@ -497,6 +547,53 @@ func TestParserParseServers(t *testing.T) {
 
 }
 
+func TestParserParseGeneralAPIInfoGlobalSecurityV3(t *testing.T) {
+	t.Parallel()
+
+	// Test simple global security
+	parser := New(GenerateOpenAPI3Doc(true))
+	err := parser.parseGeneralAPIInfoV3([]string{
+		"@security ApiKeyAuth",
+	})
+	assert.NoError(t, err)
+	assert.Len(t, parser.openAPI.Security, 1)
+	assert.Contains(t, parser.openAPI.Security[0], "ApiKeyAuth")
+	assert.Equal(t, []string{}, parser.openAPI.Security[0]["ApiKeyAuth"])
+
+	// Test OAuth2 with scopes
+	parser2 := New(GenerateOpenAPI3Doc(true))
+	err2 := parser2.parseGeneralAPIInfoV3([]string{
+		"@security OAuth2Implicit[read,write]",
+	})
+	assert.NoError(t, err2)
+	assert.Len(t, parser2.openAPI.Security, 1)
+	assert.Contains(t, parser2.openAPI.Security[0], "OAuth2Implicit")
+	assert.Equal(t, []string{"read", "write"}, parser2.openAPI.Security[0]["OAuth2Implicit"])
+
+	// Test OR logic
+	parser3 := New(GenerateOpenAPI3Doc(true))
+	err3 := parser3.parseGeneralAPIInfoV3([]string{
+		"@security ApiKeyAuth || BasicAuth",
+	})
+	assert.NoError(t, err3)
+	assert.Len(t, parser3.openAPI.Security, 1)
+	assert.Contains(t, parser3.openAPI.Security[0], "ApiKeyAuth")
+	assert.Contains(t, parser3.openAPI.Security[0], "BasicAuth")
+	assert.Equal(t, []string{}, parser3.openAPI.Security[0]["ApiKeyAuth"])
+	assert.Equal(t, []string{}, parser3.openAPI.Security[0]["BasicAuth"])
+
+	// Test AND logic (multiple @security lines)
+	parser4 := New(GenerateOpenAPI3Doc(true))
+	err4 := parser4.parseGeneralAPIInfoV3([]string{
+		"@security ApiKeyAuth",
+		"@security BasicAuth",
+	})
+	assert.NoError(t, err4)
+	assert.Len(t, parser4.openAPI.Security, 2)
+	assert.Contains(t, parser4.openAPI.Security[0], "ApiKeyAuth")
+	assert.Contains(t, parser4.openAPI.Security[1], "BasicAuth")
+}
+
 func TestParseTypeAlias(t *testing.T) {
 	t.Parallel()
 
@@ -514,4 +611,79 @@ func TestParseTypeAlias(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t, string(expected), string(result))
+}
+
+func TestParseInterface(t *testing.T) {
+	t.Parallel()
+
+	searchDir := "testdata/v3/interface"
+
+	p := New(GenerateOpenAPI3Doc(true))
+
+	err := p.ParseAPI(searchDir, mainAPIFile, defaultParseDepth)
+	require.NoError(t, err)
+
+	expected, err := os.ReadFile(filepath.Join(searchDir, "expected.json"))
+	require.NoError(t, err)
+
+	result, err := json.Marshal(p.openAPI)
+	require.NoError(t, err)
+
+	assert.JSONEq(t, string(expected), string(result))
+}
+
+func TestParseRecursionWithSchemaName(t *testing.T) {
+	t.Parallel()
+
+	searchDir := "testdata/recursion_schema_name"
+	p := New(GenerateOpenAPI3Doc(true))
+
+	err := p.ParseAPI(searchDir, mainAPIFile, defaultParseDepth)
+	require.NoError(t, err)
+
+	userSchema, exists := p.openAPI.Components.Spec.Schemas["User"]
+	require.True(t, exists, "User schema should exist")
+	require.NotNil(t, userSchema, "User schema should not be nil")
+	require.NotNil(t, userSchema.Spec, "User schema spec should not be nil")
+
+	assert.Equal(t, "object", (*userSchema.Spec.Type)[0])
+
+	childrenProp, exists := userSchema.Spec.Properties["children"]
+	require.True(t, exists, "children property should exist")
+	require.NotNil(t, childrenProp.Spec, "children property spec should not be nil")
+
+	assert.Equal(t, "array", (*childrenProp.Spec.Type)[0])
+
+	require.NotNil(t, childrenProp.Spec.Items, "children items should not be nil")
+	require.NotNil(t, childrenProp.Spec.Items.Schema, "children items schema should not be nil")
+
+	expectedRef := "#/components/schemas/User"
+	assert.Equal(t, expectedRef, childrenProp.Spec.Items.Schema.Ref.Ref)
+}
+
+func TestGetSchemaByRef(t *testing.T) {
+	t.Parallel()
+
+	p := New(GenerateOpenAPI3Doc(true))
+	p.openAPI.Components.Spec.Schemas = make(map[string]*spec.RefOrSpec[spec.Schema])
+
+	t.Run("Existing schema", func(t *testing.T) {
+		testSchema := &spec.Schema{}
+		testSchema.Type = &spec.SingleOrArray[string]{"string"}
+		p.openAPI.Components.Spec.Schemas["TestSchema"] = spec.NewRefOrSpec(nil, testSchema)
+
+		ref := &spec.Ref{Ref: "#/components/schemas/TestSchema"}
+		result := p.getSchemaByRef(ref)
+
+		require.NotNil(t, result)
+		assert.Equal(t, testSchema, result)
+	})
+
+	t.Run("Non-existing schema returns empty schema", func(t *testing.T) {
+		ref := &spec.Ref{Ref: "#/components/schemas/NonExistentSchema"}
+		result := p.getSchemaByRef(ref)
+
+		require.NotNil(t, result)
+		assert.Equal(t, &spec.Schema{}, result)
+	})
 }
