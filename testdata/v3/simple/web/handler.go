@@ -127,3 +127,13 @@ type Cat struct {
 	Hunts bool `json:"hunts"`
 	Age   int  `json:"age"`
 }
+
+type Fish struct {
+	Breed string `json:"breed"`
+	Size  int    `json:"size"`
+}
+
+type CatchedFishForm struct {
+	Count uint  `form:"count"`
+	Fish  *Fish `form:"-"`
+}
